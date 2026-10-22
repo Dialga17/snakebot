@@ -63,6 +63,8 @@
     }
     #wrap {
       position: relative;
+      flex: 1 1 0;
+      min-height: 0;
       margin-top: 8px;
       border-radius: 10px;
       overflow: hidden;
@@ -71,8 +73,9 @@
     }
     #wrap canvas {
       display: block;
-      width: 100%;
-      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
     }
     #toasts {
       position: absolute;
@@ -91,7 +94,8 @@
       grid-template-columns: repeat(4, 1fr);
       gap: 6px;
       padding: 8px;
-      flex: 1;
+      flex: 0 0 auto;
+      max-height: 30%;
       overflow-y: auto;
       background: rgba(255,255,255,0.04);
       border-top: 1px solid rgba(255,255,255,0.1);
@@ -315,7 +319,7 @@
   <script type="module">(() => { 'use strict';
     // ===== TAHAP 2B: LOGIKA GAME =====
     const $ = id => document.getElementById(id);
-    const COLS = 15;
+    const COLS = 30;
     const MAX_A = 60;
     const MAX_B = 90;
     const QMAX = 6000;
@@ -368,7 +372,7 @@
 
     function layout() {
       const wrap = document.getElementById('wrap');
-      cell = Math.floor(wrap.clientWidth / COLS);
+      cell = Math.max(4, Math.floor(wrap.clientWidth / COLS));
       ROWS = Math.max(10, Math.floor(wrap.clientHeight / cell));
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       cv.width = cell * COLS * dpr;
@@ -377,6 +381,8 @@
       ctx.scale(dpr, dpr);
       cv.style.width = cell * COLS + 'px';
       cv.style.height = cell * ROWS + 'px';
+      cv.style.left = Math.max(0, Math.floor((wrap.clientWidth - cell * COLS) / 2)) + 'px';
+      cv.style.top = Math.max(0, Math.floor((wrap.clientHeight - cell * ROWS) / 2)) + 'px';
     }
 
     function newGame() {
@@ -492,39 +498,31 @@
       let curD = DIRS.findIndex(d => d.x === S.dir.x && d.y === S.dir.y);
       if (curD < 0) curD = 0;
 
-      const search = (avoidBombs) => {
-        const first = new Map();
-        const q = [];
-        const visit = (x, y, fd) => {
-          const nk = key(x, y);
-          if (nk === hk || blocked.has(nk) || first.has(nk)) return -2;
-          const it = S.items.get(nk);
-          if (avoidBombs && it && it.t === 'b') return -2;
-          if (it && it.t === 'a') return fd;
-          first.set(nk, fd);
-          q.push({ x, y, fd });
-          return -2;
-        };
+      const first = new Map();
+      const q = [];
+      const visit = (x, y, fd) => {
+        const nk = key(x, y);
+        if (nk === hk || blocked.has(nk) || first.has(nk)) return -2;
+        if (S.items.has(nk)) return fd; // apel atau bom, mana yang terdekat
+        first.set(nk, fd);
+        q.push({ x, y, fd });
+        return -2;
+      };
+      for (let d = 0; d < 4; d++) {
+        const r = visit(wx(head.x + DIRS[d].x), wy(head.y + DIRS[d].y), d);
+        if (r !== -2) return r;
+      }
+      for (let i = 0; i < q.length; i++) {
+        const c = q[i];
         for (let d = 0; d < 4; d++) {
-          const r = visit(wx(head.x + DIRS[d].x), wy(head.y + DIRS[d].y), d);
+          const r = visit(wx(c.x + DIRS[d].x), wy(c.y + DIRS[d].y), c.fd);
           if (r !== -2) return r;
         }
-        for (let i = 0; i < q.length; i++) {
-          const c = q[i];
-          for (let d = 0; d < 4; d++) {
-            const r = visit(wx(c.x + DIRS[d].x), wy(c.y + DIRS[d].y), c.fd);
-            if (r !== -2) return r;
-          }
-        }
-        // tidak ada apel terjangkau: lanjut lurus kalau bisa
-        const ahead = key(wx(head.x + DIRS[curD].x), wy(head.y + DIRS[curD].y));
-        if (first.has(ahead)) return curD;
-        return q.length ? q[0].fd : -1;
-      };
-
-      let d = search(true);
-      if (d === -1) d = search(false);
-      return d === -1 ? curD : d;
+      }
+      // tidak ada item terjangkau: lanjut lurus kalau bisa
+      const ahead = key(wx(head.x + DIRS[curD].x), wy(head.y + DIRS[curD].y));
+      if (first.has(ahead)) return curD;
+      return q.length ? q[0].fd : curD;
     }
 
     function step() {
@@ -678,12 +676,13 @@
     }
 
     function fx(k, color, n, speed) {
+      const sc = Math.max(0.5, cell / 20);
       const cx = (k % COLS + 0.5) * cell;
       const cy = (Math.floor(k / COLS) + 0.5) * cell;
       for (let i = 0; i < n; i++) {
         const a = Math.random() * Math.PI * 2;
-        const v = speed * (0.5 + Math.random() * 0.5);
-        part(cx, cy, Math.cos(a) * v, Math.sin(a) * v, 0.4 + Math.random() * 0.6, color, 3 + Math.random() * 4, 0.15);
+        const v = speed * sc * (0.5 + Math.random() * 0.5);
+        part(cx, cy, Math.cos(a) * v, Math.sin(a) * v, 0.4 + Math.random() * 0.6, color, (3 + Math.random() * 4) * sc, 0.15);
       }
     }
 
