@@ -90,55 +90,58 @@
       z-index: 10;
     }
     #gifts {
+      position: fixed;
+      left: 8px;
+      right: 8px;
+      bottom: 6px;
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 6px;
-      padding: 8px;
-      flex: 0 0 auto;
-      max-height: 30%;
-      overflow-y: auto;
-      background: rgba(255,255,255,0.04);
-      border-top: 1px solid rgba(255,255,255,0.1);
+      grid-template-columns: repeat(8, 1fr);
+      gap: 4px;
+      padding: 4px;
+      background: rgba(0,0,0,0.35);
+      border-radius: 8px;
+      z-index: 5;
+    }
+    @media (max-width: 600px) {
+      #gifts { grid-template-columns: repeat(4, 1fr); }
     }
     .g {
       background: rgba(255,255,255,0.08);
-      border-radius: 8px;
-      padding: 6px;
+      border-radius: 6px;
+      padding: 3px 2px;
       cursor: pointer;
       border: 1px solid rgba(255,255,255,0.12);
-      transition: transform 0.15s, border-color 0.15s;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 2px;
+      gap: 1px;
     }
-    .g:hover {
-      transform: translateY(-3px);
-      border-color: #ff6b6b;
-      box-shadow: 0 4px 12px rgba(255, 107, 107, 0.2);
+    .g canvas {
+      width: 20px;
+      height: 20px;
     }
     .g .n {
-      font-size: clamp(8px, 1.8vw, 14px);
+      font-size: 9px;
       font-weight: 700;
       text-align: center;
-      line-height: 1.2;
+      line-height: 1.1;
     }
     .g .e {
-      font-size: clamp(8px, 1.6vw, 12px);
+      font-size: 8px;
       font-weight: 600;
       text-align: center;
+      line-height: 1.1;
     }
     .g .c {
-      font-size: clamp(7px, 1.4vw, 10px);
-      color: rgba(255,255,255,0.6);
+      line-height: 1;
     }
     .g .coin {
       display: inline-block;
       background: #ffd700;
       color: #000;
-      border-radius: 50%;
-      padding: 1px 6px;
-      font-size: clamp(6px, 1.2vw, 9px);
+      border-radius: 8px;
+      padding: 0 4px;
+      font-size: 7px;
       font-weight: 800;
     }
     #banner {
@@ -270,7 +273,6 @@
     @media (max-width: 480px) {
       #stats { gap: 4px; }
       #stats > div { padding: 4px 2px; }
-      .g { padding: 4px; }
     }
     ::-webkit-scrollbar {
       width: 4px;
@@ -319,7 +321,7 @@
   <script type="module">(() => { 'use strict';
     // ===== TAHAP 2B: LOGIKA GAME =====
     const $ = id => document.getElementById(id);
-    const COLS = 30;
+    const COLS = 40;
     const MAX_A = 60;
     const MAX_B = 90;
     const QMAX = 6000;
@@ -719,47 +721,116 @@
       return 1 + c3 * Math.pow(p - 1, 3) + c1 * Math.pow(p - 1, 2);
     }
 
+    const PI2 = Math.PI * 2;
+
+    function drawApple(cx, cy, r) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.beginPath();
+      ctx.ellipse(cx, cy + r * 1.0, r * 0.75, r * 0.2, 0, 0, PI2);
+      ctx.fill();
+      const g = ctx.createRadialGradient(cx - r * 0.4, cy - r * 0.3, r * 0.1, cx, cy, r * 1.2);
+      g.addColorStop(0, '#ff8a80');
+      g.addColorStop(0.45, '#e53935');
+      g.addColorStop(1, '#8e1b1b');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - r * 0.5);
+      ctx.bezierCurveTo(cx + r * 0.2, cy - r * 1.0, cx + r * 1.2, cy - r * 0.7, cx + r * 1.0, cy + r * 0.15);
+      ctx.bezierCurveTo(cx + r * 0.85, cy + r * 0.95, cx + r * 0.3, cy + r * 1.05, cx, cy + r * 0.85);
+      ctx.bezierCurveTo(cx - r * 0.3, cy + r * 1.05, cx - r * 0.85, cy + r * 0.95, cx - r * 1.0, cy + r * 0.15);
+      ctx.bezierCurveTo(cx - r * 1.2, cy - r * 0.7, cx - r * 0.2, cy - r * 1.0, cx, cy - r * 0.5);
+      ctx.closePath();
+      ctx.fill();
+      // batang
+      ctx.strokeStyle = '#6d4c1d';
+      ctx.lineWidth = Math.max(1, r * 0.2);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - r * 0.45);
+      ctx.quadraticCurveTo(cx + r * 0.05, cy - r * 0.8, cx + r * 0.2, cy - r * 1.0);
+      ctx.stroke();
+      // daun
+      ctx.fillStyle = '#4ade80';
+      ctx.beginPath();
+      ctx.ellipse(cx + r * 0.5, cy - r * 0.85, r * 0.42, r * 0.2, -0.45, 0, PI2);
+      ctx.fill();
+      // kilau
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.beginPath();
+      ctx.ellipse(cx - r * 0.45, cy - r * 0.2, r * 0.2, r * 0.34, -0.5, 0, PI2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawBomb(cx, cy, r, ph) {
+      ctx.save();
+      const by = cy + r * 0.3;
+      const pulse = Math.sin(T / 220 + ph) * 0.5 + 0.5;
+      // cahaya merah berdenyut
+      const glow = ctx.createRadialGradient(cx, by, r * 0.8, cx, by, r * 1.9);
+      glow.addColorStop(0, 'rgba(255,60,40,' + (0.12 + pulse * 0.22) + ')');
+      glow.addColorStop(1, 'rgba(255,60,40,0)');
+      ctx.fillStyle = glow;
+      ctx.beginPath();
+      ctx.arc(cx, by, r * 1.9, 0, PI2);
+      ctx.fill();
+      // bayangan
+      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      ctx.beginPath();
+      ctx.ellipse(cx, by + r * 1.0, r * 0.8, r * 0.2, 0, 0, PI2);
+      ctx.fill();
+      // badan
+      const g = ctx.createRadialGradient(cx - r * 0.35, by - r * 0.4, r * 0.1, cx, by, r * 1.1);
+      g.addColorStop(0, '#6b7280');
+      g.addColorStop(0.5, '#1f2937');
+      g.addColorStop(1, '#030712');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(cx, by, r, 0, PI2);
+      ctx.fill();
+      // tutup sumbu
+      ctx.fillStyle = '#4b5563';
+      ctx.fillRect(cx - r * 0.32, by - r * 1.2, r * 0.64, r * 0.32);
+      // sumbu
+      const ex = cx + r * 0.75;
+      const ey = by - r * 1.8;
+      ctx.strokeStyle = '#a16207';
+      ctx.lineWidth = Math.max(1, r * 0.16);
+      ctx.lineCap = 'round';
+      ctx.beginPath();
+      ctx.moveTo(cx, by - r * 1.2);
+      ctx.quadraticCurveTo(cx + r * 0.1, by - r * 1.75, ex, ey);
+      ctx.stroke();
+      // percikan api
+      const fl = 0.65 + 0.35 * Math.sin(T / 70 + ph * 3);
+      const sr = r * 0.6 * fl;
+      const sg = ctx.createRadialGradient(ex, ey, 0, ex, ey, sr);
+      sg.addColorStop(0, '#fff7ae');
+      sg.addColorStop(0.4, '#ffb020');
+      sg.addColorStop(1, 'rgba(255,90,0,0)');
+      ctx.fillStyle = sg;
+      ctx.beginPath();
+      ctx.arc(ex, ey, sr, 0, PI2);
+      ctx.fill();
+      // kilau
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      ctx.beginPath();
+      ctx.ellipse(cx - r * 0.4, by - r * 0.42, r * 0.22, r * 0.34, -0.6, 0, PI2);
+      ctx.fill();
+      ctx.restore();
+    }
+
     function drawItems() {
       if (!S.items || S.items.size === 0) return;
-      const now = T;
-      const keys = S.items.keys();
-      for (const k of keys) {
-        const it = S.items.get(k);
-        if (!it) continue;
-        const t = (now - it.born) / 300;
+      for (const it of S.items.values()) {
+        const t = (T - it.born) / 300;
         if (t < 0) continue;
         const s = Math.min(1, pop(t));
-        const cx = (k % COLS + 0.5) * cell;
-        const cy = (Math.floor(k / COLS) + 0.5) * cell;
-        const r = cell / 2 * s;
-        if (it.t === 'a') {
-          ctx.fillStyle = 'rgba(255,255,255,0.08)';
-          arc(cx, cy, r);
-          ctx.fillStyle = '#ff4d4d';
-          arc(cx, cy, r);
-          const shine = Math.sin(t * Math.PI * 2) * 0.5 + 0.5;
-          ctx.fillStyle = `rgba(255,255,255,${shine * 0.6})`;
-          ctx.beginPath();
-          ctx.arc(cx - r * 0.3, cy - r * 0.3, r * 0.4, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = '#4ade80';
-          ctx.beginPath();
-          ctx.ellipse(cx + r * 0.8, cy - r * 0.8, r * 0.25, r * 0.15, -0.5, 0, Math.PI * 2);
-          ctx.fill();
-        } else {
-          ctx.fillStyle = 'rgba(255,255,255,0.06)';
-          arc(cx, cy, r);
-          ctx.fillStyle = '#333';
-          arc(cx, cy, r);
-          const glow = Math.sin(t * Math.PI * 2) * 0.5 + 0.5;
-          ctx.fillStyle = `rgba(255,0,0,${0.2 + glow * 0.6})`;
-          arc(cx, cy, r * 0.7);
-          const spr = Math.abs(Math.sin(t * 2)) * 0.4;
-          ctx.fillStyle = '#ff6600';
-          ctx.beginPath();
-          ctx.arc(cx + r * 0.5, cy - r * 0.5, r * 0.3 + spr, 0, Math.PI * 2);
-          ctx.fill();
-        }
+        const cx = (it.k % COLS + 0.5) * cell;
+        const cy = (Math.floor(it.k / COLS) + 0.5) * cell;
+        if (it.t === 'a') drawApple(cx, cy, cell * 0.42 * s);
+        else drawBomb(cx, cy, cell * 0.32 * s, it.k * 0.37);
       }
     }
 
@@ -782,78 +853,98 @@
       const pRaw = (T - S.lastStep) / stepMs();
       const p = S.paused ? 1 : Math.max(0, Math.min(1, pRaw));
       const len = S.snake.length;
-      for (let i = len - 1; i >= 0; i--) {
-        const pos = segPos(i, p);
-        const t = (len - 1 - i) / Math.max(1, len - 1);
-        const r = cell / 2 * (0.25 + 0.75 * t);
-        const hue = (S.level * 37 + i * 5) % 360;
-        ctx.save();
-        const grad = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, r);
-        grad.addColorStop(0, `hsl(${hue}, 80%, 70%)`);
-        grad.addColorStop(1, `hsl(${hue}, 80%, 35%)`);
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = 'rgba(255,255,255,0.06)';
-        arc(pos.x, pos.y, r * 1.6);
-        if (i < len - 1) {
-          const prev = segPos(i + 1, p);
-          const dx = Math.abs(prev.x - pos.x);
-          const dy = Math.abs(prev.y - pos.y);
-          if (dx < cell * 1.5 && dy < cell * 1.5) {
-            ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-            ctx.lineWidth = 2;
+      const pts = [];
+      for (let i = 0; i < len; i++) pts.push(segPos(i, p));
+      const rad = (i) => cell * (0.2 + 0.3 * Math.pow(1 - i / Math.max(1, len - 1), 0.7));
+      const hue = (S.level * 37) % 360;
+      const linked = (a, b) => Math.abs(a.x - b.x) < cell * 1.6 && Math.abs(a.y - b.y) < cell * 1.6;
+
+      ctx.save();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      // satu lapisan badan dari ekor ke kepala
+      const pass = (mul, add, colorFn, dx, dy) => {
+        for (let i = len - 1; i >= 0; i--) {
+          const a = pts[i];
+          const r = Math.max(0.5, rad(i) * mul + add);
+          const col = colorFn(i);
+          ctx.fillStyle = col;
+          ctx.strokeStyle = col;
+          ctx.beginPath();
+          ctx.arc(a.x + dx, a.y + dy, r, 0, PI2);
+          ctx.fill();
+          if (i > 0 && linked(a, pts[i - 1])) {
+            const b = pts[i - 1];
+            ctx.lineWidth = Math.max(1, r + Math.max(0.5, rad(i - 1) * mul + add));
             ctx.beginPath();
-            ctx.moveTo(prev.x, prev.y);
-            ctx.lineTo(pos.x, pos.y);
+            ctx.moveTo(a.x + dx, a.y + dy);
+            ctx.lineTo(b.x + dx, b.y + dy);
             ctx.stroke();
           }
         }
-        ctx.restore();
-      }
-      if (len > 0) {
-        const pos = segPos(0, p);
-        const r = cell / 2 * 0.75;
-        ctx.save();
-        const hue = (S.level * 37) % 360;
-        const grad = ctx.createRadialGradient(pos.x, pos.y, 0, pos.x, pos.y, r);
-        grad.addColorStop(0, `hsl(${hue}, 90%, 80%)`);
-        grad.addColorStop(1, `hsl(${hue}, 90%, 50%)`);
-        ctx.fillStyle = grad;
-        ctx.beginPath();
-        ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = 'rgba(255,255,255,0.12)';
-        arc(pos.x, pos.y, r * 1.8);
-        const dir = S.dir;
-        const eyeOff = r * 0.32;
-        const ex1 = pos.x - eyeOff * (dir.x || 1);
-        const ex2 = pos.x + eyeOff * (dir.x || 1);
-        const ey1 = pos.y - eyeOff * (dir.y || 0);
-        const ey2 = pos.y + eyeOff * (dir.y || 0);
+      };
+      pass(1, 1.5, () => 'rgba(0,0,0,0.28)', 1, 2);                       // bayangan
+      pass(1, 1.2, () => 'hsl(' + hue + ',60%,14%)', 0, 0);                // garis tepi
+      pass(1, 0, (i) => 'hsl(' + ((hue + i * 3) % 360) + ',72%,' + (i % 4 < 2 ? 44 : 38) + '%)', 0, 0); // badan belang
+      pass(0.45, 0, () => 'rgba(255,255,255,0.2)', -cell * 0.05, -cell * 0.08); // kilau
+
+      // kepala
+      const head = pts[0];
+      const dir = S.dir;
+      const ang = Math.atan2(dir.y, dir.x);
+      const px = -dir.y, py = dir.x;
+      const r = rad(0) * 1.05;
+      ctx.fillStyle = 'hsl(' + hue + ',60%,14%)';
+      ctx.beginPath();
+      ctx.ellipse(head.x + dir.x * r * 0.15, head.y + dir.y * r * 0.15, r * 1.25, r * 1.03, ang, 0, PI2);
+      ctx.fill();
+      const hg = ctx.createRadialGradient(head.x - r * 0.3, head.y - r * 0.3, r * 0.1, head.x, head.y, r * 1.3);
+      hg.addColorStop(0, 'hsl(' + hue + ',80%,62%)');
+      hg.addColorStop(1, 'hsl(' + hue + ',72%,38%)');
+      ctx.fillStyle = hg;
+      ctx.beginPath();
+      ctx.ellipse(head.x + dir.x * r * 0.15, head.y + dir.y * r * 0.15, r * 1.15, r * 0.93, ang, 0, PI2);
+      ctx.fill();
+
+      // mata
+      for (const sd of [-1, 1]) {
+        const ex = head.x + dir.x * r * 0.35 + px * r * 0.52 * sd;
+        const ey = head.y + dir.y * r * 0.35 + py * r * 0.52 * sd;
         ctx.fillStyle = '#fff';
         ctx.beginPath();
-        ctx.arc(ex1, ey1, r * 0.15, 0, Math.PI * 2);
-        ctx.arc(ex2, ey2, r * 0.15, 0, Math.PI * 2);
+        ctx.arc(ex, ey, r * 0.3, 0, PI2);
         ctx.fill();
         ctx.fillStyle = '#111';
-        const pupilOff = dir.x * r * 0.15;
         ctx.beginPath();
-        ctx.arc(ex1 + pupilOff, ey1 + pupilOff, r * 0.1, 0, Math.PI * 2);
-        ctx.arc(ex2 + pupilOff, ey2 + pupilOff, r * 0.1, 0, Math.PI * 2);
+        ctx.arc(ex + dir.x * r * 0.1, ey + dir.y * r * 0.1, r * 0.16, 0, PI2);
         ctx.fill();
-        const t = T / 300;
-        const tongueLen = Math.max(0, Math.sin(t) * r * 0.6);
-        ctx.fillStyle = '#ff3333';
+        ctx.fillStyle = 'rgba(255,255,255,0.9)';
         ctx.beginPath();
-        ctx.ellipse(pos.x + dir.x * tongueLen * 0.3, pos.y + r * 0.2 + dir.y * tongueLen * 0.5, tongueLen, r * 0.3, 0, 0, Math.PI * 2);
+        ctx.arc(ex + dir.x * r * 0.04 - r * 0.05, ey + dir.y * r * 0.04 - r * 0.06, r * 0.06, 0, PI2);
         ctx.fill();
-        ctx.beginPath();
-        ctx.ellipse(pos.x + dir.x * tongueLen * 0.1, pos.y + r * 0.45, tongueLen * 0.4, r * 0.18, dir.x * 0.3, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
       }
+
+      // lidah menjulur sesekali
+      const ph = (T % 1400) / 1400;
+      if (ph < 0.35) {
+        const tl = r * (0.8 + 0.5 * Math.sin(ph / 0.35 * Math.PI));
+        const sx = head.x + dir.x * r * 1.2;
+        const sy = head.y + dir.y * r * 1.2;
+        const tx = sx + dir.x * tl;
+        const ty = sy + dir.y * tl;
+        ctx.strokeStyle = '#ff3d5a';
+        ctx.lineWidth = Math.max(1, cell * 0.09);
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(tx, ty);
+        ctx.moveTo(tx, ty);
+        ctx.lineTo(tx + dir.x * r * 0.3 + px * r * 0.22, ty + dir.y * r * 0.3 + py * r * 0.22);
+        ctx.moveTo(tx, ty);
+        ctx.lineTo(tx + dir.x * r * 0.3 - px * r * 0.22, ty + dir.y * r * 0.3 - py * r * 0.22);
+        ctx.stroke();
+      }
+      ctx.restore();
     }
 
     function draw() {
