@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Snake Bot</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     * {
       margin: 0;
@@ -14,24 +17,26 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: #0f0f1a;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      color: #fff;
+      font-family: 'Press Start 2P', 'Courier New', monospace;
+      color: #f4f4f4;
       user-select: none;
+      image-rendering: pixelated;
     }
     body {
-      background: radial-gradient(ellipse at center, #1a1a3e 0%, #0f0f1a 70%);
-      animation: bgShift 18s ease-in-out infinite alternate;
+      background: repeating-conic-gradient(#1a1c2c 0% 25%, #1f2340 0% 50%) 0 0 / 24px 24px;
     }
-    @keyframes bgShift {
-      0% { background: radial-gradient(ellipse at center, #1a1a3e 0%, #0f0f1a 70%); }
-      50% { background: radial-gradient(ellipse at center, #2a1a4e 0%, #1a0f2e 70%); }
-      100% { background: radial-gradient(ellipse at center, #1a2a4e 0%, #0f1f2a 70%); }
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(0deg, rgba(0,0,0,0.07) 0 1px, transparent 1px 3px);
+      pointer-events: none;
+      z-index: 300;
     }
     #app {
       position: fixed;
-      top: 11vh;
-      bottom: 17vh;
+      top: 8px;
+      bottom: 8px;
       left: 8px;
       right: 8px;
       display: flex;
@@ -41,248 +46,216 @@
     #stats {
       display: grid;
       grid-template-columns: repeat(5, 1fr);
-      gap: 6px;
-      padding: 8px;
-      background: rgba(255,255,255,0.06);
-      border-radius: 10px;
-      border: 1px solid rgba(255,255,255,0.1);
+      gap: 8px;
+      padding: 3px 3px 0;
     }
     #stats > div {
-      background: rgba(255,255,255,0.08);
-      border-radius: 6px;
-      padding: 6px 4px;
+      background: #333c57;
+      box-shadow: inset -3px -3px 0 #1a1c2c, inset 3px 3px 0 #566c86, 0 0 0 3px #0b0b12;
+      padding: 8px 3px 7px;
       text-align: center;
-      font-size: clamp(10px, 2.5vw, 16px);
-      font-weight: 600;
-      letter-spacing: 0.5px;
+      overflow: hidden;
+      white-space: nowrap;
     }
     #stats .lbl {
-      font-size: clamp(8px, 1.8vw, 12px);
-      font-weight: 400;
-      color: rgba(255,255,255,0.7);
+      font-size: clamp(5px, 1.5vw, 9px);
+      color: #94b0c2;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+    #stats .lbl canvas {
+      width: 10px;
+      height: 10px;
+      image-rendering: pixelated;
+      vertical-align: middle;
+      margin-right: 3px;
+    }
+    #stats > div > div:last-child {
+      font-size: clamp(7px, 2.2vw, 14px);
+    }
+    #stats > div:nth-child(1) > div:last-child { color: #ffcd75; }
+    #stats > div:nth-child(2) > div:last-child { color: #73eff7; }
+    #stats > div:nth-child(3) > div:last-child { color: #a7f070; }
+    #stats > div:nth-child(4) > div:last-child { color: #ef7d57; }
+    #stats > div:nth-child(5) > div:last-child { color: #c0cbdc; }
+    #bar {
+      height: 14px;
+      margin: 12px 3px 0;
+      padding: 3px;
+      background: #1a1c2c;
+      box-shadow: 0 0 0 3px #0b0b12, inset 0 0 0 2px #566c86;
+    }
+    #barFill {
+      height: 100%;
+      width: 0;
+      background: repeating-linear-gradient(90deg, #a7f070 0 6px, #38b764 6px 8px);
+      transition: width 0.25s steps(8);
     }
     #wrap {
       position: relative;
       flex: 1 1 0;
       min-height: 0;
-      margin-top: 8px;
-      border-radius: 10px;
+      margin: 14px 0 3px;
       overflow: hidden;
-      border: 2px solid rgba(255,255,255,0.2);
-      box-shadow: 0 0 20px rgba(0, 255, 255, 0.08);
+      border: 4px solid #94b0c2;
+      box-shadow: 0 0 0 4px #0b0b12;
+      background: #0b0b12;
     }
     #wrap canvas {
       display: block;
       position: absolute;
       top: 0;
       left: 0;
+      image-rendering: pixelated;
     }
     #toasts {
       position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
+      top: 6px;
+      left: 6px;
+      right: 6px;
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 6px;
       justify-content: center;
       pointer-events: none;
       z-index: 10;
     }
+    .t {
+      padding: 6px 8px;
+      font-size: clamp(6px, 1.8vw, 11px);
+      line-height: 1.4;
+      background: #1a1c2c;
+      border: 3px solid;
+      box-shadow: 4px 4px 0 rgba(0,0,0,0.55);
+      animation: popIn 0.25s steps(4);
+      pointer-events: none;
+      transition: opacity 0.2s steps(3);
+    }
+    .t.apel { border-color: #a7f070; color: #a7f070; }
+    .t.bom { border-color: #ef7d57; color: #ef7d57; }
+    .t.menang { border-color: #ffcd75; color: #ffcd75; }
+    @keyframes popIn {
+      from { transform: scale(0.6); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
     #gifts {
-      position: fixed;
-      left: 8px;
-      right: 8px;
-      bottom: 6px;
-      display: grid;
-      grid-template-columns: repeat(8, 1fr);
-      gap: 4px;
-      padding: 4px;
-      background: rgba(0,0,0,0.35);
-      border-radius: 8px;
-      z-index: 5;
-    }
-    @media (max-width: 600px) {
-      #gifts { grid-template-columns: repeat(4, 1fr); }
-    }
-    .g {
-      background: rgba(255,255,255,0.08);
-      border-radius: 6px;
-      padding: 3px 2px;
-      cursor: pointer;
-      border: 1px solid rgba(255,255,255,0.12);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 1px;
-    }
-    .g canvas {
-      width: 20px;
-      height: 20px;
-    }
-    .g .n {
-      font-size: 9px;
-      font-weight: 700;
-      text-align: center;
-      line-height: 1.1;
-    }
-    .g .e {
-      font-size: 8px;
-      font-weight: 600;
-      text-align: center;
-      line-height: 1.1;
-    }
-    .g .c {
-      line-height: 1;
-    }
-    .g .coin {
-      display: inline-block;
-      background: #ffd700;
-      color: #000;
-      border-radius: 8px;
-      padding: 0 4px;
-      font-size: 7px;
-      font-weight: 800;
+      display: none;
     }
     #banner {
       position: fixed;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      font-size: clamp(28px, 8vw, 64px);
-      font-weight: 900;
+      font-size: clamp(18px, 6vw, 48px);
+      line-height: 1.5;
       text-align: center;
-      color: #ffd700;
+      color: #ffcd75;
       opacity: 0;
-      transition: opacity 0.3s;
+      transition: opacity 0.2s steps(3);
       pointer-events: none;
-      text-shadow: 0 0 20px rgba(255, 215, 0, 0.4);
+      text-shadow: 4px 4px 0 #b13e53, 8px 8px 0 #0b0b12;
+      z-index: 150;
     }
     #banner.show {
       opacity: 1;
     }
     #tamat {
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.85);
+      inset: 0;
+      background: rgba(11, 11, 18, 0.9);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 1s;
+      transition: opacity 0.6s steps(6);
       z-index: 100;
     }
     #tamat.on {
       opacity: 1;
     }
     #tamat .txt {
-      font-size: clamp(40px, 12vw, 120px);
-      font-weight: 900;
-      color: #ff4d4d;
+      font-size: clamp(28px, 9vw, 96px);
+      color: #ef7d57;
+      text-shadow: 6px 6px 0 #b13e53, 12px 12px 0 #0b0b12;
     }
     #tamat .sub {
-      font-size: clamp(16px, 4vw, 40px);
-      color: #fff;
-      margin-top: 12px;
+      font-size: clamp(9px, 2.4vw, 24px);
+      color: #f4f4f4;
+      margin-top: 28px;
     }
     #test {
       position: fixed;
-      bottom: 16vh;
+      bottom: 16px;
       left: 8px;
       right: 8px;
       display: none;
+      background: #1a1c2c;
+      border: 3px solid #94b0c2;
+      padding: 8px;
+      z-index: 50;
+      box-shadow: 4px 4px 0 rgba(0,0,0,0.6);
+    }
+    #testRow {
+      display: flex;
       flex-wrap: wrap;
       gap: 6px;
-      background: rgba(0, 0, 0, 0.8);
-      border-radius: 10px;
-      padding: 10px;
-      z-index: 50;
-      box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+    }
+    #testRow button {
+      font-family: inherit;
+      font-size: 8px;
+      padding: 6px 8px;
+      color: #f4f4f4;
+      background: #333c57;
+      border: 2px solid #0b0b12;
+      box-shadow: inset -2px -2px 0 #1a1c2c, inset 2px 2px 0 #566c86;
+      cursor: pointer;
     }
     #start {
       position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.9);
+      inset: 0;
+      background: repeating-conic-gradient(#1a1c2c 0% 25%, #1f2340 0% 50%) 0 0 / 24px 24px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       z-index: 200;
+      text-align: center;
+      padding: 16px;
     }
     #start .title {
-      font-size: clamp(36px, 10vw, 90px);
-      font-weight: 900;
-      color: #ffd700;
-      text-shadow: 0 0 30px rgba(255, 215, 0, 0.5);
-      margin-bottom: 20px;
+      font-size: clamp(20px, 6vw, 64px);
+      color: #a7f070;
+      text-shadow: 4px 4px 0 #257179, 8px 8px 0 #0b0b12;
+      margin-bottom: 40px;
+      line-height: 1.4;
     }
     #start .btn {
-      padding: 16px 40px;
-      font-size: clamp(20px, 5vw, 40px);
-      font-weight: 900;
+      font-family: inherit;
+      padding: 18px 24px;
+      font-size: clamp(9px, 2.4vw, 22px);
       color: #fff;
-      background: linear-gradient(135deg, #ff6b6b, #ee5a24);
-      border: none;
-      border-radius: 12px;
+      background: #38b764;
+      border: 4px solid #0b0b12;
+      box-shadow: inset -4px -4px 0 #257179, inset 4px 4px 0 #a7f070, 6px 6px 0 #0b0b12;
       cursor: pointer;
-      box-shadow: 0 0 30px rgba(238, 90, 36, 0.4);
-      transition: transform 0.15s;
     }
     #start .btn:active {
-      transform: scale(0.95);
+      transform: translate(4px, 4px);
+      box-shadow: inset -4px -4px 0 #257179, inset 4px 4px 0 #a7f070, 2px 2px 0 #0b0b12;
     }
     #start .hint {
-      margin-top: 12px;
-      font-size: clamp(10px, 2vw, 16px);
-      color: rgba(255,255,255,0.6);
-    }
-    .t {
-      padding: 6px 12px;
-      border-radius: 8px;
-      font-size: clamp(12px, 2.5vw, 18px);
-      font-weight: 700;
-      border-left: 4px solid;
-      animation: popIn 0.3s ease-out;
-      pointer-events: none;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    }
-    .t.apel {
-      border-left-color: #4ade80;
-      background: rgba(74, 222, 128, 0.15);
-    }
-    .t.bom {
-      border-left-color: #f87171;
-      background: rgba(248, 113, 113, 0.15);
-    }
-    .t.menang {
-      border-left-color: #fbbf24;
-      background: rgba(251, 191, 36, 0.15);
-    }
-    @keyframes popIn {
-      from { transform: scale(0.8); opacity: 0; }
-      to { transform: scale(1); opacity: 1; }
-    }
-    @media (max-width: 480px) {
-      #stats { gap: 4px; }
-      #stats > div { padding: 4px 2px; }
+      margin-top: 36px;
+      font-size: clamp(6px, 1.6vw, 12px);
+      line-height: 1.8;
+      color: #94b0c2;
     }
     ::-webkit-scrollbar {
       width: 4px;
     }
-    ::-webkit-scrollbar-track {
-      background: transparent;
-    }
     ::-webkit-scrollbar-thumb {
-      background: rgba(255,255,255,0.3);
-      border-radius: 2px;
+      background: #566c86;
     }
   </style>
 </head>
@@ -290,7 +263,7 @@
   <div id="start">
     <div class="title">SNAKE BOT</div>
     <button class="btn" id="startBtn">MULAI / LAYAR PENUH</button>
-    <div class="hint">Tambah subtitle singkat atau gak, bebas</div>
+    <div class="hint">KIRIM HADIAH DI LIVE<br>BUAT MENGATUR GAME</div>
   </div>
 
   <div id="banner"></div>
@@ -308,9 +281,10 @@
       <div><div class="lbl">Level</div><div id="sLv">1</div></div>
       <div><div class="lbl">Menang</div><div id="sWin">0</div></div>
       <div><div class="lbl">Panjang</div><div id="sLen">3/15</div></div>
-      <div><div class="lbl">Apel</div><div id="sApel">0</div></div>
-      <div><div class="lbl">Bom</div><div id="sBom">0</div></div>
+      <div><div class="lbl"><canvas id="iApel" width="8" height="8"></canvas>Apel</div><div id="sApel">0</div></div>
+      <div><div class="lbl"><canvas id="iBom" width="8" height="8"></canvas>Bom</div><div id="sBom">0</div></div>
     </div>
+    <div id="bar"><div id="barFill"></div></div>
     <div id="wrap">
       <canvas id="cv"></canvas>
       <div id="toasts"></div>
@@ -322,6 +296,7 @@
     // ===== TAHAP 2B: LOGIKA GAME =====
     const $ = id => document.getElementById(id);
     const COLS = 40;
+    const SWEEP_GAP = 2; // jarak antar baris sapuan (1 = menyapu setiap baris)
     const MAX_A = 60;
     const MAX_B = 90;
     const QMAX = 6000;
@@ -336,6 +311,7 @@
     const cv = document.getElementById('cv');
     const ctx = cv.getContext('2d');
     let ROWS = 10;
+    let bgCv = null;
     let cell = 20;
     const GIFTS = {};
     const P = [];
@@ -362,7 +338,9 @@
       qB: [],
       appleTimer: 0,
       bombTimer: 0,
-      bombInterval: 0
+      bombInterval: 0,
+      sweepDir: 1,
+      turn: 0
     };
 
     const rnd = () => Math.random();
@@ -374,8 +352,17 @@
 
     function layout() {
       const wrap = document.getElementById('wrap');
+      // ukur ruang yang tersedia, lalu pas-kan arena ke kelipatan sel
+      wrap.style.flex = '1 1 0';
+      wrap.style.alignSelf = 'stretch';
+      wrap.style.width = '';
+      wrap.style.height = '';
       cell = Math.max(4, Math.floor(wrap.clientWidth / COLS));
       ROWS = Math.max(10, Math.floor(wrap.clientHeight / cell));
+      wrap.style.flex = '0 0 auto';
+      wrap.style.alignSelf = 'center';
+      wrap.style.width = (cell * COLS + 8) + 'px';
+      wrap.style.height = (ROWS * cell + 8) + 'px';
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       cv.width = cell * COLS * dpr;
       cv.height = cell * ROWS * dpr;
@@ -383,8 +370,19 @@
       ctx.scale(dpr, dpr);
       cv.style.width = cell * COLS + 'px';
       cv.style.height = cell * ROWS + 'px';
-      cv.style.left = Math.max(0, Math.floor((wrap.clientWidth - cell * COLS) / 2)) + 'px';
-      cv.style.top = Math.max(0, Math.floor((wrap.clientHeight - cell * ROWS) / 2)) + 'px';
+      cv.style.left = '0px';
+      cv.style.top = '0px';
+      // latar kotak-kotak: 1 piksel per sel, diperbesar tanpa blur
+      bgCv = document.createElement('canvas');
+      bgCv.width = COLS;
+      bgCv.height = ROWS;
+      const bg = bgCv.getContext('2d');
+      for (let y = 0; y < ROWS; y++) {
+        for (let x = 0; x < COLS; x++) {
+          bg.fillStyle = (x + y) % 2 ? '#1b1f36' : '#20253f';
+          bg.fillRect(x, y, 1, 1);
+        }
+      }
     }
 
     function newGame() {
@@ -402,6 +400,8 @@
       S.qB = [];
       S.appleTimer = 0;
       S.bombTimer = 0;
+      S.sweepDir = 1;
+      S.turn = 0;
       hud();
       T = performance.now();
     }
@@ -421,15 +421,18 @@
       S.qB = [];
       S.appleTimer = 0;
       S.bombTimer = 0;
+      S.sweepDir = 1;
+      S.turn = 0;
       hud();
     }
 
     function hud() {
-      $('sLv').textContent = 'Level: ' + S.level;
-      $('sWin').textContent = 'Menang: ' + S.wins;
-      $('sLen').textContent = 'Panjang: ' + S.snake.length + '/' + target();
-      $('sApel').textContent = 'Apel: ' + S.apples;
-      $('sBom').textContent = 'Bom: ' + S.bombs;
+      $('sLv').textContent = S.level;
+      $('sWin').textContent = S.wins;
+      $('sLen').textContent = S.snake.length + '/' + target();
+      $('sApel').textContent = S.apples;
+      $('sBom').textContent = S.bombs;
+      $('barFill').style.width = Math.min(100, S.snake.length / target() * 100) + '%';
     }
 
     function put(k, t) {
@@ -492,39 +495,20 @@
       }
     }
 
+    // Gerak berpola: menyapu satu baris sampai ujung, turun, lalu kembali ke arah sebaliknya
     function botDir() {
-      const head = S.snake[0];
-      const hk = key(head.x, head.y);
-      const blocked = new Set();
-      for (let i = 0; i < S.snake.length - 1; i++) blocked.add(key(S.snake[i].x, S.snake[i].y));
-      let curD = DIRS.findIndex(d => d.x === S.dir.x && d.y === S.dir.y);
-      if (curD < 0) curD = 0;
-
-      const first = new Map();
-      const q = [];
-      const visit = (x, y, fd) => {
-        const nk = key(x, y);
-        if (nk === hk || blocked.has(nk) || first.has(nk)) return -2;
-        if (S.items.has(nk)) return fd; // apel atau bom, mana yang terdekat
-        first.set(nk, fd);
-        q.push({ x, y, fd });
-        return -2;
-      };
-      for (let d = 0; d < 4; d++) {
-        const r = visit(wx(head.x + DIRS[d].x), wy(head.y + DIRS[d].y), d);
-        if (r !== -2) return r;
+      if (S.turn > 0) {
+        S.turn--;
+        return 3; // turun
       }
-      for (let i = 0; i < q.length; i++) {
-        const c = q[i];
-        for (let d = 0; d < 4; d++) {
-          const r = visit(wx(c.x + DIRS[d].x), wy(c.y + DIRS[d].y), c.fd);
-          if (r !== -2) return r;
-        }
+      const hx = S.snake[0].x;
+      const atEdge = (S.sweepDir === 1 && hx >= COLS - 1) || (S.sweepDir === -1 && hx <= 0);
+      if (atEdge) {
+        S.sweepDir = -S.sweepDir;
+        S.turn = SWEEP_GAP - 1;
+        return 3; // turun
       }
-      // tidak ada item terjangkau: lanjut lurus kalau bisa
-      const ahead = key(wx(head.x + DIRS[curD].x), wy(head.y + DIRS[curD].y));
-      if (first.has(ahead)) return curD;
-      return q.length ? q[0].fd : curD;
+      return S.sweepDir === 1 ? 0 : 2;
     }
 
     function step() {
@@ -723,114 +707,71 @@
 
     const PI2 = Math.PI * 2;
 
-    function drawApple(cx, cy, r) {
-      ctx.save();
-      ctx.fillStyle = 'rgba(0,0,0,0.25)';
-      ctx.beginPath();
-      ctx.ellipse(cx, cy + r * 1.0, r * 0.75, r * 0.2, 0, 0, PI2);
-      ctx.fill();
-      const g = ctx.createRadialGradient(cx - r * 0.4, cy - r * 0.3, r * 0.1, cx, cy, r * 1.2);
-      g.addColorStop(0, '#ff8a80');
-      g.addColorStop(0.45, '#e53935');
-      g.addColorStop(1, '#8e1b1b');
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.moveTo(cx, cy - r * 0.5);
-      ctx.bezierCurveTo(cx + r * 0.2, cy - r * 1.0, cx + r * 1.2, cy - r * 0.7, cx + r * 1.0, cy + r * 0.15);
-      ctx.bezierCurveTo(cx + r * 0.85, cy + r * 0.95, cx + r * 0.3, cy + r * 1.05, cx, cy + r * 0.85);
-      ctx.bezierCurveTo(cx - r * 0.3, cy + r * 1.05, cx - r * 0.85, cy + r * 0.95, cx - r * 1.0, cy + r * 0.15);
-      ctx.bezierCurveTo(cx - r * 1.2, cy - r * 0.7, cx - r * 0.2, cy - r * 1.0, cx, cy - r * 0.5);
-      ctx.closePath();
-      ctx.fill();
-      // batang
-      ctx.strokeStyle = '#6d4c1d';
-      ctx.lineWidth = Math.max(1, r * 0.2);
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(cx, cy - r * 0.45);
-      ctx.quadraticCurveTo(cx + r * 0.05, cy - r * 0.8, cx + r * 0.2, cy - r * 1.0);
-      ctx.stroke();
-      // daun
-      ctx.fillStyle = '#4ade80';
-      ctx.beginPath();
-      ctx.ellipse(cx + r * 0.5, cy - r * 0.85, r * 0.42, r * 0.2, -0.45, 0, PI2);
-      ctx.fill();
-      // kilau
-      ctx.fillStyle = 'rgba(255,255,255,0.55)';
-      ctx.beginPath();
-      ctx.ellipse(cx - r * 0.45, cy - r * 0.2, r * 0.2, r * 0.34, -0.5, 0, PI2);
-      ctx.fill();
-      ctx.restore();
+    function makeSprite(rows, pal) {
+      const c = document.createElement('canvas');
+      c.width = 8;
+      c.height = 8;
+      const g = c.getContext('2d');
+      for (let y = 0; y < rows.length; y++) {
+        for (let x = 0; x < rows[y].length; x++) {
+          const col = pal[rows[y][x]];
+          if (col) {
+            g.fillStyle = col;
+            g.fillRect(x, y, 1, 1);
+          }
+        }
+      }
+      return c;
     }
 
-    function drawBomb(cx, cy, r, ph) {
-      ctx.save();
-      const by = cy + r * 0.3;
-      const pulse = Math.sin(T / 220 + ph) * 0.5 + 0.5;
-      // cahaya merah berdenyut
-      const glow = ctx.createRadialGradient(cx, by, r * 0.8, cx, by, r * 1.9);
-      glow.addColorStop(0, 'rgba(255,60,40,' + (0.12 + pulse * 0.22) + ')');
-      glow.addColorStop(1, 'rgba(255,60,40,0)');
-      ctx.fillStyle = glow;
-      ctx.beginPath();
-      ctx.arc(cx, by, r * 1.9, 0, PI2);
-      ctx.fill();
-      // bayangan
-      ctx.fillStyle = 'rgba(0,0,0,0.3)';
-      ctx.beginPath();
-      ctx.ellipse(cx, by + r * 1.0, r * 0.8, r * 0.2, 0, 0, PI2);
-      ctx.fill();
-      // badan
-      const g = ctx.createRadialGradient(cx - r * 0.35, by - r * 0.4, r * 0.1, cx, by, r * 1.1);
-      g.addColorStop(0, '#6b7280');
-      g.addColorStop(0.5, '#1f2937');
-      g.addColorStop(1, '#030712');
-      ctx.fillStyle = g;
-      ctx.beginPath();
-      ctx.arc(cx, by, r, 0, PI2);
-      ctx.fill();
-      // tutup sumbu
-      ctx.fillStyle = '#4b5563';
-      ctx.fillRect(cx - r * 0.32, by - r * 1.2, r * 0.64, r * 0.32);
-      // sumbu
-      const ex = cx + r * 0.75;
-      const ey = by - r * 1.8;
-      ctx.strokeStyle = '#a16207';
-      ctx.lineWidth = Math.max(1, r * 0.16);
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(cx, by - r * 1.2);
-      ctx.quadraticCurveTo(cx + r * 0.1, by - r * 1.75, ex, ey);
-      ctx.stroke();
-      // percikan api
-      const fl = 0.65 + 0.35 * Math.sin(T / 70 + ph * 3);
-      const sr = r * 0.6 * fl;
-      const sg = ctx.createRadialGradient(ex, ey, 0, ex, ey, sr);
-      sg.addColorStop(0, '#fff7ae');
-      sg.addColorStop(0.4, '#ffb020');
-      sg.addColorStop(1, 'rgba(255,90,0,0)');
-      ctx.fillStyle = sg;
-      ctx.beginPath();
-      ctx.arc(ex, ey, sr, 0, PI2);
-      ctx.fill();
-      // kilau
-      ctx.fillStyle = 'rgba(255,255,255,0.35)';
-      ctx.beginPath();
-      ctx.ellipse(cx - r * 0.4, by - r * 0.42, r * 0.22, r * 0.34, -0.6, 0, PI2);
-      ctx.fill();
-      ctx.restore();
+    const SPR_A = makeSprite([
+      '....bg..',
+      '...bggg.',
+      '.dddbdd.',
+      'drrrrrrd',
+      'drhrrrrd',
+      'drhrrrrd',
+      '.drrrrd.',
+      '..dddd..'
+    ], { b: '#733e39', g: '#63c74d', d: '#a22633', r: '#e43b44', h: '#ff9a9a' });
+
+    const SPR_B = makeSprite([
+      '.....yo.',
+      '....f...',
+      '..xxxx..',
+      '.xkkkkx.',
+      'xkwkkkkx',
+      'xkkkkkkx',
+      '.xkkkkx.',
+      '..xxxx..'
+    ], { y: '#ffcd75', o: '#ef7d57', f: '#c28d4b', x: '#0b0b12', k: '#566c86', w: '#c0cbdc' });
+
+    for (const pair of [['iApel', SPR_A], ['iBom', SPR_B]]) {
+      const c = document.getElementById(pair[0]);
+      if (c) c.getContext('2d').drawImage(pair[1], 0, 0);
     }
 
     function drawItems() {
       if (!S.items || S.items.size === 0) return;
+      ctx.imageSmoothingEnabled = false;
       for (const it of S.items.values()) {
         const t = (T - it.born) / 300;
         if (t < 0) continue;
-        const s = Math.min(1, pop(t));
-        const cx = (it.k % COLS + 0.5) * cell;
-        const cy = (Math.floor(it.k / COLS) + 0.5) * cell;
-        if (it.t === 'a') drawApple(cx, cy, cell * 0.42 * s);
-        else drawBomb(cx, cy, cell * 0.32 * s, it.k * 0.37);
+        const sc = Math.min(1, pop(t));
+        const size = Math.max(2, Math.round(cell * 0.96 * sc));
+        const gx = (it.k % COLS) * cell;
+        const gy = Math.floor(it.k / COLS) * cell;
+        const x = Math.round(gx + (cell - size) / 2);
+        let y = gy + (cell - size) / 2;
+        if (it.t === 'a') {
+          y += Math.sin(T / 260 + it.k) * cell * 0.05;
+          ctx.drawImage(SPR_A, x, Math.round(y), size, size);
+        } else {
+          const pulse = Math.sin(T / 200 + it.k * 0.37) * 0.5 + 0.5;
+          ctx.fillStyle = 'rgba(255,60,60,' + (0.08 + pulse * 0.2).toFixed(2) + ')';
+          ctx.fillRect(gx, gy, cell, cell);
+          ctx.drawImage(SPR_B, x, Math.round(y), size, size);
+        }
       }
     }
 
@@ -848,135 +789,83 @@
       return { x: (px + 0.5) * cell, y: (py + 0.5) * cell };
     }
 
+    const SNAKE_PAL = [
+      ['#1a3c2b', '#38b764', '#a7f070'],
+      ['#1d2b53', '#3b5dc9', '#73eff7'],
+      ['#5d275d', '#b13e53', '#ef7d57'],
+      ['#3a2a1a', '#ef7d57', '#ffcd75'],
+      ['#2a1a4a', '#7a4fd6', '#d7a5ff'],
+      ['#0f3b3f', '#257179', '#73eff7']
+    ];
+
     function drawSnake() {
       if (!S.snake || S.snake.length === 0) return;
       const pRaw = (T - S.lastStep) / stepMs();
       const p = S.paused ? 1 : Math.max(0, Math.min(1, pRaw));
       const len = S.snake.length;
-      const pts = [];
-      for (let i = 0; i < len; i++) pts.push(segPos(i, p));
-      const rad = (i) => cell * (0.2 + 0.3 * Math.pow(1 - i / Math.max(1, len - 1), 0.7));
-      const hue = (S.level * 37) % 360;
-      const linked = (a, b) => Math.abs(a.x - b.x) < cell * 1.6 && Math.abs(a.y - b.y) < cell * 1.6;
+      const pal = SNAKE_PAL[(S.level - 1) % SNAKE_PAL.length];
+      const sz = Math.max(3, Math.round(cell * 0.92));
+      const o = Math.max(1, Math.round(cell * 0.12));
 
-      ctx.save();
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-
-      // satu lapisan badan dari ekor ke kepala
-      const pass = (mul, add, colorFn, dx, dy) => {
-        for (let i = len - 1; i >= 0; i--) {
-          const a = pts[i];
-          const r = Math.max(0.5, rad(i) * mul + add);
-          const col = colorFn(i);
-          ctx.fillStyle = col;
-          ctx.strokeStyle = col;
-          ctx.beginPath();
-          ctx.arc(a.x + dx, a.y + dy, r, 0, PI2);
-          ctx.fill();
-          if (i > 0 && linked(a, pts[i - 1])) {
-            const b = pts[i - 1];
-            ctx.lineWidth = Math.max(1, r + Math.max(0.5, rad(i - 1) * mul + add));
-            ctx.beginPath();
-            ctx.moveTo(a.x + dx, a.y + dy);
-            ctx.lineTo(b.x + dx, b.y + dy);
-            ctx.stroke();
-          }
+      for (let i = len - 1; i >= 0; i--) {
+        const a = segPos(i, p);
+        const s = (i === len - 1 && len > 2) ? Math.max(3, Math.round(sz * 0.72)) : sz;
+        const x = Math.round(a.x - s / 2);
+        const y = Math.round(a.y - s / 2);
+        ctx.fillStyle = pal[0];
+        ctx.fillRect(x, y, s, s);
+        ctx.fillStyle = i === 0 ? pal[2] : pal[1];
+        ctx.fillRect(x + o, y + o, s - o * 2, s - o * 2);
+        if (i > 0 && i % 2 === 0) {
+          const h = Math.max(1, Math.round(s * 0.28));
+          ctx.fillStyle = pal[2];
+          ctx.fillRect(x + o, y + o, h, h);
         }
-      };
-      pass(1, 1.5, () => 'rgba(0,0,0,0.28)', 1, 2);                       // bayangan
-      pass(1, 1.2, () => 'hsl(' + hue + ',60%,14%)', 0, 0);                // garis tepi
-      pass(1, 0, (i) => 'hsl(' + ((hue + i * 3) % 360) + ',72%,' + (i % 4 < 2 ? 44 : 38) + '%)', 0, 0); // badan belang
-      pass(0.45, 0, () => 'rgba(255,255,255,0.2)', -cell * 0.05, -cell * 0.08); // kilau
+      }
 
-      // kepala
-      const head = pts[0];
-      const dir = S.dir;
-      const ang = Math.atan2(dir.y, dir.x);
-      const px = -dir.y, py = dir.x;
-      const r = rad(0) * 1.05;
-      ctx.fillStyle = 'hsl(' + hue + ',60%,14%)';
-      ctx.beginPath();
-      ctx.ellipse(head.x + dir.x * r * 0.15, head.y + dir.y * r * 0.15, r * 1.25, r * 1.03, ang, 0, PI2);
-      ctx.fill();
-      const hg = ctx.createRadialGradient(head.x - r * 0.3, head.y - r * 0.3, r * 0.1, head.x, head.y, r * 1.3);
-      hg.addColorStop(0, 'hsl(' + hue + ',80%,62%)');
-      hg.addColorStop(1, 'hsl(' + hue + ',72%,38%)');
-      ctx.fillStyle = hg;
-      ctx.beginPath();
-      ctx.ellipse(head.x + dir.x * r * 0.15, head.y + dir.y * r * 0.15, r * 1.15, r * 0.93, ang, 0, PI2);
-      ctx.fill();
-
-      // mata
+      // kepala: mata dan lidah
+      const head = segPos(0, p);
+      const d = S.dir;
+      const px = -d.y, py = d.x;
+      const e = Math.max(2, Math.round(cell * 0.28));
+      const pu = Math.max(1, Math.round(e * 0.5));
       for (const sd of [-1, 1]) {
-        const ex = head.x + dir.x * r * 0.35 + px * r * 0.52 * sd;
-        const ey = head.y + dir.y * r * 0.35 + py * r * 0.52 * sd;
-        ctx.fillStyle = '#fff';
-        ctx.beginPath();
-        ctx.arc(ex, ey, r * 0.3, 0, PI2);
-        ctx.fill();
-        ctx.fillStyle = '#111';
-        ctx.beginPath();
-        ctx.arc(ex + dir.x * r * 0.1, ey + dir.y * r * 0.1, r * 0.16, 0, PI2);
-        ctx.fill();
-        ctx.fillStyle = 'rgba(255,255,255,0.9)';
-        ctx.beginPath();
-        ctx.arc(ex + dir.x * r * 0.04 - r * 0.05, ey + dir.y * r * 0.04 - r * 0.06, r * 0.06, 0, PI2);
-        ctx.fill();
+        const ex = head.x + d.x * cell * 0.1 + px * cell * 0.22 * sd;
+        const ey = head.y + d.y * cell * 0.1 + py * cell * 0.22 * sd;
+        ctx.fillStyle = '#f4f4f4';
+        ctx.fillRect(Math.round(ex - e / 2), Math.round(ey - e / 2), e, e);
+        ctx.fillStyle = '#0b0b12';
+        ctx.fillRect(Math.round(ex - pu / 2 + d.x * pu * 0.5), Math.round(ey - pu / 2 + d.y * pu * 0.5), pu, pu);
       }
-
-      // lidah menjulur sesekali
-      const ph = (T % 1400) / 1400;
-      if (ph < 0.35) {
-        const tl = r * (0.8 + 0.5 * Math.sin(ph / 0.35 * Math.PI));
-        const sx = head.x + dir.x * r * 1.2;
-        const sy = head.y + dir.y * r * 1.2;
-        const tx = sx + dir.x * tl;
-        const ty = sy + dir.y * tl;
-        ctx.strokeStyle = '#ff3d5a';
-        ctx.lineWidth = Math.max(1, cell * 0.09);
-        ctx.beginPath();
-        ctx.moveTo(sx, sy);
-        ctx.lineTo(tx, ty);
-        ctx.moveTo(tx, ty);
-        ctx.lineTo(tx + dir.x * r * 0.3 + px * r * 0.22, ty + dir.y * r * 0.3 + py * r * 0.22);
-        ctx.moveTo(tx, ty);
-        ctx.lineTo(tx + dir.x * r * 0.3 - px * r * 0.22, ty + dir.y * r * 0.3 - py * r * 0.22);
-        ctx.stroke();
+      if ((T % 1400) / 1400 < 0.3) {
+        const tl = Math.max(2, Math.round(cell * 0.4));
+        const tw = Math.max(1, Math.round(cell * 0.14));
+        const cx = head.x + d.x * (sz / 2 + tl / 2);
+        const cy = head.y + d.y * (sz / 2 + tl / 2);
+        const w = d.x !== 0 ? tl : tw;
+        const h = d.x !== 0 ? tw : tl;
+        ctx.fillStyle = '#ef233c';
+        ctx.fillRect(Math.round(cx - w / 2), Math.round(cy - h / 2), w, h);
       }
-      ctx.restore();
     }
 
     function draw() {
       ctx.save();
+      ctx.imageSmoothingEnabled = false;
       ctx.clearRect(0, 0, cv.width, cv.height);
       if (S.shake > 0) {
-        ctx.translate((Math.random() - 0.5) * S.shake, (Math.random() - 0.5) * S.shake);
+        const a = Math.min(cell * 0.5, S.shake / 30);
+        ctx.translate(Math.round((Math.random() - 0.5) * 2 * a), Math.round((Math.random() - 0.5) * 2 * a));
       }
-      const W = COLS * cell, H = ROWS * cell;
-      ctx.fillStyle = 'rgba(8, 10, 20, 0.7)';
-      ctx.fillRect(0, 0, W, H);
-      ctx.strokeStyle = 'rgba(255,255,255,0.04)';
-      ctx.lineWidth = 1;
-      for (let i = 0; i <= COLS; i++) {
-        ctx.beginPath();
-        ctx.moveTo(i * cell, 0);
-        ctx.lineTo(i * cell, H);
-        ctx.stroke();
-      }
-      for (let i = 0; i <= ROWS; i++) {
-        ctx.beginPath();
-        ctx.moveTo(0, i * cell);
-        ctx.lineTo(W, i * cell);
-        ctx.stroke();
-      }
+      if (bgCv) ctx.drawImage(bgCv, 0, 0, COLS * cell, ROWS * cell);
       drawItems();
       drawSnake();
       for (let i = 0; i < P.length; i++) {
-        const p = P[i];
-        ctx.globalAlpha = Math.max(0, p.life / 1.5);
-        ctx.fillStyle = p.color;
-        arc(p.x, p.y, p.size * Math.max(0, p.life));
+        const q = P[i];
+        const ps = Math.max(1, Math.round(q.size * Math.max(0, q.life)));
+        ctx.globalAlpha = Math.max(0, Math.min(1, q.life / 0.6));
+        ctx.fillStyle = q.color;
+        ctx.fillRect(Math.round(q.x - ps / 2), Math.round(q.y - ps / 2), ps, ps);
       }
       ctx.globalAlpha = 1;
       ctx.restore();
