@@ -332,6 +332,7 @@
     let ROWS = 10;
     let cell = 20;
     const GIFTS = {};
+    const P = [];
     let started = false;
     let T = 0;
     const S = {
@@ -424,212 +425,138 @@
     }
 
     function put(k, t) {
-      S.items.set(k, { t: t, born: T });
+      S.items.set(k, { t: t, k: k, born: T });
+      if (t === 'a') S.cA++;
+      else S.cB++;
     }
 
     function take(k) {
       return S.items.get(k);
     }
 
-    function addItems(t, n) {
-      n = Math.max(0, n);
-      const limit = t === 'a' ? MAX_A : MAX_B;
-      let cnt = 0;
+    function freeCell() {
       const occ = new Set();
       for (const seg of S.snake) occ.add(key(seg.x, seg.y));
-      for (const it of S.items.values()) occ.add(it.k);
-      for (const k of S.qA) occ.add(k);
-      for (const k of S.qB) occ.add(k);
-      while (cnt < n) {
-        if (t === 'a' ? S.cA < MAX_A : S.cB < MAX_B) {
-          const k = freeCell(occ);
+      for (const k of S.items.keys()) occ.add(k);
+      const total = COLS * ROWS;
+      if (occ.size >= total) return -1;
+      for (let tries = 0; tries < 40; tries++) {
+        const k = Math.floor(rnd() * total);
+        if (!occ.has(k)) return k;
+      }
+      for (let k = 0; k < total; k++) if (!occ.has(k)) return k;
+      return -1;
+    }
+
+    function addItems(t, n) {
+      n = Math.max(0, n);
+      const q = t === 'a' ? S.qA : S.qB;
+      for (let i = 0; i < n; i++) {
+        const count = t === 'a' ? S.cA : S.cB;
+        const limit = t === 'a' ? MAX_A : MAX_B;
+        if (count < limit) {
+          const k = freeCell();
           if (k === -1) break;
           put(k, t);
-          if (t === 'a') S.cA++;
-          else S.cB++;
-          cnt++;
+        } else if (q.length < QMAX) {
+          q.push(1);
         } else {
-          if (t === 'a') S.qA.push(0);
-          else S.qB.push(0);
-          if (S.qA.length > QMAX) S.qA.shift();
-          if (S.qB.length > QMAX) S.qB.shift();
           break;
         }
-        cnt++;
       }
     }
 
     function drain() {
-      let cnt = 0;
-      while (cnt < 20) {
-        if (S.qA.length > 0 || S.qB.length > 0) {
-          if (S.qA.length > 0 && (S.qB.length === 0 || S.cA < MAX_A)) {
-            const k = S.qA.shift();
-            put(k, 'a');
-            S.cA++;
-          } else if (S.qB.length > 0 && (S.qA.length === 0 || S.cB < MAX_B)) {
-            const k = S.qB.shift();
-            put(k, 'b');
-            S.cB++;
-          }
-        }
-        cnt++;
-      }
-    }
-
-    function freeCell() {
-      const occupied = new Set();
-      if (S.snake.length > 0) {
-        for (const seg of S.snake) occupied.add(key(seg.x, seg.y));
-      }
-      for (const it of S.items.values()) occupied.add(it.k);
-      for (const k of S.qA) occupied.add(k);
-      for (const k of S.qB) occupied.add(k);
-      for (let y = 0; y < ROWS; y++) {
-        for (let x = 0; x < COLS; x++) {
-          const k = key(x, y);
-          if (!occupied.has(k)) return k;
+      for (let n = 0; n < 20; n++) {
+        if (S.qA.length > 0 && S.cA < MAX_A) {
+          const k = freeCell();
+          if (k === -1) break;
+          S.qA.pop();
+          put(k, 'a');
+        } else if (S.qB.length > 0 && S.cB < MAX_B) {
+          const k = freeCell();
+          if (k === -1) break;
+          S.qB.pop();
+          put(k, 'b');
+        } else {
+          break;
         }
       }
-      return -1;
-    }
-
-    function bfs(hk, body, isGoal, allowBomb) {
-      if (isGoal(hk)) return 0;
-      const visited = new Set();
-      visited.add(key(hk.x, hk.y));
-      const queue = [{ x: hk.x, y: hk.y, dir: 0 }];
-      const dirs = [
-        { x: 1, y: 0 },
-        { x: 0, y: -1 },
-        { x: -1, y: 0 },
-        { x: 0, y: 1 }
-      ];
-      while (queue.length > 0) {
-        const cur = queue.shift();
-        for (let d = 0; d < 4; d++) {
-          const nx = wx(cur.x + dirs[d].x);
-          const ny = wy(cur.y + dirs[d].y);
-          const nk = key(nx, ny);
-          if (visited.has(nk)) continue;
-          const pt = { x: nx, y: ny };
-          if (body.some(seg => seg.x === nx && seg.y === ny && d !== 0 && d !== 2)) continue;
-          if (!allowBomb && (d === 2 || d === 3)) { /* skip bom */ }
-          if (isGoal(pt)) return d;
-          visited.add(nk);
-          queue.push({ x: nx, y: ny, dir: d });
-        }
-      }
-      return -1;
     }
 
     function botDir() {
-      const body = S.snake.slice(1, S.snake.length - 1);
-      const hk = S.snake[0];
-      const dirs = [
-        { x: 1, y: 0 },
-        { x: 0, y: -1 },
-        { x: -1, y: 0 },
-        { x: 0, y: 1 }
-      ];
-      const isApple = (p) => {
-        if (S.items.has(key(p.x, p.y))) {
-          return S.items.get(key(p.x, p.y)).t === 'a';
+      const head = S.snake[0];
+      const hk = key(head.x, head.y);
+      const blocked = new Set();
+      for (let i = 0; i < S.snake.length - 1; i++) blocked.add(key(S.snake[i].x, S.snake[i].y));
+      let curD = DIRS.findIndex(d => d.x === S.dir.x && d.y === S.dir.y);
+      if (curD < 0) curD = 0;
+
+      const search = (avoidBombs) => {
+        const first = new Map();
+        const q = [];
+        const visit = (x, y, fd) => {
+          const nk = key(x, y);
+          if (nk === hk || blocked.has(nk) || first.has(nk)) return -2;
+          const it = S.items.get(nk);
+          if (avoidBombs && it && it.t === 'b') return -2;
+          if (it && it.t === 'a') return fd;
+          first.set(nk, fd);
+          q.push({ x, y, fd });
+          return -2;
+        };
+        for (let d = 0; d < 4; d++) {
+          const r = visit(wx(head.x + DIRS[d].x), wy(head.y + DIRS[d].y), d);
+          if (r !== -2) return r;
         }
-        return false;
-      };
-      const isBomb = (p) => {
-        if (S.items.has(key(p.x, p.y))) {
-          return S.items.get(key(p.x, p.y)).t === 'b';
+        for (let i = 0; i < q.length; i++) {
+          const c = q[i];
+          for (let d = 0; d < 4; d++) {
+            const r = visit(wx(c.x + DIRS[d].x), wy(c.y + DIRS[d].y), c.fd);
+            if (r !== -2) return r;
+          }
         }
-        return false;
+        // tidak ada apel terjangkau: lanjut lurus kalau bisa
+        const ahead = key(wx(head.x + DIRS[curD].x), wy(head.y + DIRS[curD].y));
+        if (first.has(ahead)) return curD;
+        return q.length ? q[0].fd : -1;
       };
-      const hasBombInPath = (ex, ey, d) => {
-        let x = ex, y = ey;
-        for (let step = 0; step < 4; step++) {
-          x = wx(x + dirs[d].x);
-          y = wy(y + dirs[d].y);
-          if (body.some(seg => seg.x === x && seg.y === y)) return true;
-          if (isBomb({ x, y })) return true;
-        }
-        return false;
-      };
-      const tryDir = (d, checkBomb) => {
-        const nx = wx(hk.x + dirs[d].x);
-        const ny = wy(hk.y + dirs[d].y);
-        if (body.some(seg => seg.x === nx && seg.y === ny)) return -1;
-        if (!allowBomb() && !checkBomb(d)) return -1;
-        return d;
-      };
-      const allowBomb = () => false;
-      // 1. apel tanpa bom
-      for (let d = 0; d < 4; d++) {
-        const nx = wx(hk.x + dirs[d].x);
-        const ny = wy(hk.y + dirs[d].y);
-        if (body.some(seg => seg.x === nx && seg.y === ny)) continue;
-        if (isApple({ x: nx, y: ny }) && !isBomb({ x: nx, y: ny })) return d;
-      }
-      // 2. ekor tanpa bom
-      const tail = S.snake[S.snake.length - 1];
-      for (let d = 0; d < 4; d++) {
-        const nx = wx(tail.x + dirs[d].x);
-        const ny = wy(tail.y + dirs[d].y);
-        if (body.some(seg => seg.x === nx && seg.y === ny)) continue;
-        if (!isBomb({ x: nx, y: ny })) return d;
-      }
-      // 3. apel boleh lewat bom
-      for (let d = 0; d < 4; d++) {
-        const nx = wx(hk.x + dirs[d].x);
-        const ny = wy(hk.y + dirs[d].y);
-        if (body.some(seg => seg.x === nx && seg.y === ny)) continue;
-        if (isApple({ x: nx, y: ny })) return d;
-      }
-      // 4. ekor boleh lewat bom
-      for (let d = 0; d < 4; d++) {
-        const nx = wx(tail.x + dirs[d].x);
-        const ny = wy(tail.y + dirs[d].y);
-        if (body.some(seg => seg.x === nx && seg.y === ny)) continue;
-        return d;
-      }
-      // 5. arah mana pun yang bukan badan
-      for (let d = 0; d < 4; d++) {
-        const nx = wx(hk.x + dirs[d].x);
-        const ny = wy(hk.y + dirs[d].y);
-        if (!body.some(seg => seg.x === nx && seg.y === ny)) return d;
-      }
-      // 6. arah 0
-      return 0;
+
+      let d = search(true);
+      if (d === -1) d = search(false);
+      return d === -1 ? curD : d;
     }
 
     function step() {
       S.prev = S.snake.map(p => ({ ...p }));
-      const dir = botDir();
-      if (dir === -1) return;
-      const dirs = [
-        { x: 1, y: 0 },
-        { x: 0, y: -1 },
-        { x: -1, y: 0 },
-        { x: 0, y: 1 }
-      ];
-      const nk = { x: wx(S.snake[0].x + dirs[dir].x), y: wy(S.snake[0].y + dirs[dir].y) };
+      const d = botDir();
+      const head = S.snake[0];
+      const nk = { x: wx(head.x + DIRS[d].x), y: wy(head.y + DIRS[d].y) };
       S.snake.unshift(nk);
-      S.dir = dirs[dir];
+      S.dir = DIRS[d];
       const k = key(nk.x, nk.y);
       const item = S.items.get(k);
+      let grow = false;
       if (item) {
         S.items.delete(k);
         if (item.t === 'a') {
+          S.cA = Math.max(0, S.cA - 1);
           S.apples++;
-          S.snake.push(S.snake[0]);
+          grow = true;
+          fx(k, '#4ade80', 8, 90);
         } else {
+          S.cB = Math.max(0, S.cB - 1);
           S.bombs++;
           S.shake = 260;
-          fx(k, '#ff6600', 12, 80);
-          const cut = Math.max(3, 2 + Math.min(6, Math.floor(S.level / 6)));
-          if (S.snake.length > cut) {
-            S.snake = S.snake.slice(0, cut);
-            S.prev = S.snake.map(p => ({ ...p }));
-          }
+          fx(k, '#ff6600', 12, 120);
+        }
+      }
+      if (!grow) S.snake.pop();
+      if (item && item.t === 'b') {
+        const cut = Math.max(3, 2 + Math.min(6, Math.floor(S.level / 6)));
+        if (S.snake.length > cut) {
+          S.snake = S.snake.slice(0, cut);
+          S.prev = S.snake.map(p => ({ ...p }));
         }
       }
       drain();
@@ -699,7 +626,7 @@
       el.textContent = t;
       el.classList.add('show');
       if (sub) {
-        el.innerHTML = `<span style="font-size:clamp(14px,3vw,28px);font-weight:600;color:#fff;">${sub}</span>`;
+        el.innerHTML = `<div>${t}</div><div style="font-size:clamp(14px,3vw,28px);font-weight:600;color:#fff;">${sub}</div>`;
       }
       setTimeout(() => el.classList.remove('show'), 2200);
     }
@@ -751,18 +678,12 @@
     }
 
     function fx(k, color, n, speed) {
+      const cx = (k % COLS + 0.5) * cell;
+      const cy = (Math.floor(k / COLS) + 0.5) * cell;
       for (let i = 0; i < n; i++) {
         const a = Math.random() * Math.PI * 2;
-        part(
-          k % COLS + 0.5,
-          Math.floor(k / COLS) + 0.5,
-          Math.cos(a) * speed * (0.5 + Math.random() * 0.5),
-          Math.sin(a) * speed * (0.5 + Math.random() * 0.5),
-          0.4 + Math.random() * 0.6,
-          color,
-          3 + Math.random() * 4,
-          0.15
-        );
+        const v = speed * (0.5 + Math.random() * 0.5);
+        part(cx, cy, Math.cos(a) * v, Math.sin(a) * v, 0.4 + Math.random() * 0.6, color, 3 + Math.random() * 4, 0.15);
       }
     }
 
@@ -775,12 +696,13 @@
     }
 
     function updateParts(dt) {
+      const s = dt / 1000;
       for (let i = P.length - 1; i >= 0; i--) {
         const p = P[i];
-        p.x += p.vx * dt * 0.06;
-        p.y += p.vy * dt * 0.06;
-        p.vy += p.grav * dt * 0.06;
-        p.life -= dt * 0.008;
+        p.x += p.vx * s;
+        p.y += p.vy * s;
+        p.vy += p.grav * 400 * s;
+        p.life -= s;
         if (p.life <= 0) P.splice(i, 1);
       }
     }
@@ -805,13 +727,11 @@
       for (const k of keys) {
         const it = S.items.get(k);
         if (!it) continue;
-        const x = (k % COLS) * cell;
-        const y = Math.floor(k / COLS) * cell;
         const t = (now - it.born) / 300;
         if (t < 0) continue;
         const s = Math.min(1, pop(t));
-        const cx = (x + 0.5) * cell;
-        const cy = (y + 0.5) * cell;
+        const cx = (k % COLS + 0.5) * cell;
+        const cy = (Math.floor(k / COLS) + 0.5) * cell;
         const r = cell / 2 * s;
         if (it.t === 'a') {
           ctx.fillStyle = 'rgba(255,255,255,0.08)';
@@ -853,8 +773,8 @@
       if (Math.abs(dx) > 1 || Math.abs(dy) > 1) {
         return { x: (b.x + 0.5) * cell, y: (b.y + 0.5) * cell };
       }
-      const px = b.x + (a.x - b.x) * p;
-      const py = b.y + (a.y - b.y) * p;
+      const px = a.x + (b.x - a.x) * p;
+      const py = a.y + (b.y - a.y) * p;
       return { x: (px + 0.5) * cell, y: (py + 0.5) * cell };
     }
 
@@ -943,22 +863,21 @@
       if (S.shake > 0) {
         ctx.translate((Math.random() - 0.5) * S.shake, (Math.random() - 0.5) * S.shake);
       }
+      const W = COLS * cell, H = ROWS * cell;
       ctx.fillStyle = 'rgba(8, 10, 20, 0.7)';
-      ctx.fillRect(0, 0, cv.width, cv.height);
+      ctx.fillRect(0, 0, W, H);
       ctx.strokeStyle = 'rgba(255,255,255,0.04)';
       ctx.lineWidth = 1;
-      const cols = cv.width / (cell * (window.devicePixelRatio || 1));
-      const rows = cv.height / (cell * (window.devicePixelRatio || 1));
-      for (let i = 0; i <= cols; i++) {
+      for (let i = 0; i <= COLS; i++) {
         ctx.beginPath();
         ctx.moveTo(i * cell, 0);
-        ctx.lineTo(i * cell, cv.height);
+        ctx.lineTo(i * cell, H);
         ctx.stroke();
       }
-      for (let i = 0; i <= rows; i++) {
+      for (let i = 0; i <= ROWS; i++) {
         ctx.beginPath();
         ctx.moveTo(0, i * cell);
-        ctx.lineTo(cv.width, i * cell);
+        ctx.lineTo(W, i * cell);
         ctx.stroke();
       }
       drawItems();
@@ -1236,7 +1155,7 @@
       if (T > 0 && now - T < 24) return;
       T = now;
       if (started && !S.paused) {
-        update(T - (lastFrameTime || 0));
+        update(Math.min(T - (lastFrameTime || 0), 100));
         draw();
         lastFrameTime = T;
       }
